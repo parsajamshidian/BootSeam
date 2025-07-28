@@ -123,21 +123,22 @@ run_resamp_inference_phase23 <- function(mu0, mu1, mu2, sigma, n1, n2, alternati
   delta_hat_s1 <- delta_hat_naive_s1 - bias_hat # add the bias from the bootstrap
   delta_hat_s2 <- (y_bar_d_s2 - y_bar_0_s2)
   # Variance estimation
-  #sigma2_1_hat <- var(delta_hat_star_bs) #+ var_y_bar_d_s1 + var_y_bar_0_s1
-  sigma2_1_hat <- var(delta_hat_naive_star_bs) + var(delta_hat_star_bs)
+  sigma2_1_hat <- var(delta_hat_star_bs) #+ var_y_bar_d_s1 + var_y_bar_0_s1
   sigma2_2_hat <- var_y_bar_d_s2 + var_y_bar_0_s2
   # Create a df to store w vals
   delta_wmat <- data.frame(w = rep(NA, length(ws)),
                            delta_hat = rep(NA, length(ws)),
                            se_delta_hat = rep(NA, length(ws)),
-                           LCL_T_eff = rep(NA, length(ws)))
+                           LCL_T_eff = rep(NA, length(ws)),
+                           LCL_test = rep(NA, length(ws)))
   for(i in 1:length(ws)){
     w <- ws[i]
     delta_hat <- w * delta_hat_s1 + (1 - w) * delta_hat_s2
     var_delta_hat <- w^2 * sigma2_1_hat + (1 - w)^2 * sigma2_2_hat
     se_delta_hat <- sqrt(var_delta_hat)
     LCL_T_eff <- delta_hat - qnorm(1 - alpha_LCL) * se_delta_hat
-    delta_wmat[i,] = c(w, delta_hat, se_delta_hat, LCL_T_eff)
+    LCL_test <- quantile(delta_hat_star_bs, probs = alpha_LCL)
+    delta_wmat[i,] = c(w, delta_hat, se_delta_hat, LCL_T_eff, LCL_test)
   }
 
   return(list(

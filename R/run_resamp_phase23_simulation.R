@@ -85,6 +85,7 @@ run_resamp_phase23_simulation <- function(iter = 1000,
     dplyr::summarise(
       delta_hat_center = mean(delta_hat),
       delta_hat_sd = sd(delta_hat),
+      delta_hat_se = mean(se_delta_hat),
       bias = mean(bias),
       delta_hat_naive_center = mean(delta_hat_naive),
       delta_hat_naive_bias = mean(delta_hat_naive_bias),
@@ -94,6 +95,7 @@ run_resamp_phase23_simulation <- function(iter = 1000,
       mse_naive = mean(mse_naive),
       emp_cov = mean(LCL_T_eff <= delta_true),
       emp_cov_naive = mean(LCL_delta_hat_naive <= delta_true),
+      emp_cov_test = mean(LCL_test <= delta_true),
       .groups = "drop"
     ) %>%
     dplyr::mutate(dose_selected = as.character(dose_selected))
