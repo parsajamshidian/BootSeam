@@ -4,6 +4,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
                                            n_iter_dose1_done = FALSE, n_iter_dose2_done = FALSE,
                                            htest_method = "mean") {
 
+
   n = n1 + n2
   # Stage 1 data
   y0_s1 <- rnorm(n1, mean = mu0, sd = sigma)
@@ -100,6 +101,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
       }
       b2 = b2 + 1
     }
+    browser()
     # Estimate bias within this outer resample
     bias_hat <- mean(delta_star_star) - delta_1_star_b
 

@@ -63,7 +63,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
   delta_hat_2_bs <- numeric(B1)
 
   b1 = 0
-  while (b1 < B1) {
+  while (b1 <= B1) {
 
     # Resample stage 1 data
     boot_ind0 <- sample(1:n1, size = n1, replace = TRUE)
@@ -87,7 +87,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
     # Now do nested bootstrap for bias correction
     delta_star_star <- numeric(B2)
     b2 = 0
-    while (b2 < B2) {
+    while (b2 <= B2) {
       y0_boot_b2 <- y0_boot[sample(1:n1, size = n1, replace = TRUE)]
       y1_boot_b2 <- y1_boot[sample(1:n1, size = n1, replace = TRUE)]
       y2_boot_b2 <- y2_boot[sample(1:n1, size = n1, replace = TRUE)]
@@ -221,17 +221,18 @@ run_phase23_simulation_new <- function(n_sim = 100,
 
     delta_all_ests <- bind_rows(delta_all_ests, delta_ci_mat)
 
-    if (i %% 10 == 0) message("Completed iteration: ", i)
+    message("Completed iteration: ", i)
   }
 
   return(delta_all_ests)
 }
 
-delta_all_ests <- run_phase23_simulation_new(n_sim = 1000, mu0 = 0, mu1 = 0.1, mu2 = 0.4, n1 = 100, n2 = 100, seed = 4, alpha_LCL = 0.05)
+delta_all_ests <- run_phase23_simulation_new(n_sim = 100, mu0 = 0, mu1 = 0, mu2 = 0, n1 = 100, n2 = 100, B1 = 100,
+                                             seed = 4, alpha_LCL = 0.05, alpha = 0.5)
 
 
 
-delta_all_ests_summarized <- delta_all_ests_null %>% mutate(dose_selected = as.character(dose_selected)) %>%
+delta_all_ests_summarized <- delta_all_ests %>% mutate(dose_selected = as.character(dose_selected)) %>%
   group_by(w, dose_selected) %>%
   summarise(emp_cov = mean(covered),
             bias = mean(bias),
@@ -239,8 +240,8 @@ delta_all_ests_summarized <- delta_all_ests_null %>% mutate(dose_selected = as.c
             naive_bias = mean(naive_bias),
             emp_cov_naive = mean(covered_naive))
 
-saveRDS(delta_all_ests, file = "delta_all_ests.RDS")
-saveRDS(delta_all_ests_summarized, file = "delta_all_ests_summarized.RDS")
+# saveRDS(delta_all_ests, file = "delta_all_ests.RDS")
+# saveRDS(delta_all_ests_summarized, file = "delta_all_ests_summarized.RDS")
 
 
 # naive_lines <- delta_all_ests_summarized %>%

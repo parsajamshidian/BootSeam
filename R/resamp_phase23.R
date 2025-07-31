@@ -140,7 +140,7 @@ run_resamp_inference_phase23 <- function(mu0, mu1, mu2, sigma, n1, n2, alternati
       #   bias_star = c(bias_star, delta_hat_nv_star_star_s1 - delta_hat_nv_star_s1)
       # }
       # bias_hat_star = mean(bias_star)
-      #bias_vals <- c(bias_vals, delta_hat_nv_star_s1 - delta_hat_naive_s1)
+      # bias_vals <- c(bias_vals, delta_hat_nv_star_s1 - delta_hat_naive_s1)
       #delta_hat_star_bs = c(delta_hat_star_bs, delta_hat_nv_star_s1 - bias_hat_star)
       bias_vals <- c(bias_vals, delta_hat_nv_star_s1 - delta_hat_naive_s1)
       b1 = b1 + 1

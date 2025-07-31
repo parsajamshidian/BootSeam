@@ -47,7 +47,7 @@ run_resamp_phase23_simulation <- function(iter = 1000,
       mu0 = mu0, mu1 = mu1, mu2 = mu2,
       sigma = 1, n1 = n1, n2 = n2,
       alternative = "greater",
-      alpha = alpha, ws = ws, B1 = B1, B2 = B2, B_errs = B_errs,
+      alpha = alpha, ws = ws, B1 = B1, B2 = B2,
       alpha_LCL = alpha_LCL,
       n_iter_dose1_done = n_iter_dose1_done, n_iter_dose2_done = n_iter_dose2_done,
       htest_method = htest_method
