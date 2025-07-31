@@ -24,6 +24,7 @@ run_resamp_phase23_simulation <- function(iter = 1000,
                                           n2 = 100,
                                           B1 = 100,
                                           B2 = 100,
+                                          B_errs = 200,
                                           ws = seq(0, 1, length.out = 100),
                                           alpha = 0.15,
                                           alpha_LCL = 0.025,
@@ -46,7 +47,7 @@ run_resamp_phase23_simulation <- function(iter = 1000,
       mu0 = mu0, mu1 = mu1, mu2 = mu2,
       sigma = 1, n1 = n1, n2 = n2,
       alternative = "greater",
-      alpha = alpha, ws = ws, B1 = B1, B2 = B2,
+      alpha = alpha, ws = ws, B1 = B1, B2 = B2, B_errs = B_errs,
       alpha_LCL = alpha_LCL,
       n_iter_dose1_done = n_iter_dose1_done, n_iter_dose2_done = n_iter_dose2_done,
       htest_method = htest_method
@@ -70,6 +71,7 @@ run_resamp_phase23_simulation <- function(iter = 1000,
     delta_hat_naive <- samp_inference$delta_hat_naive
     delta_hat_naive_bias <- delta_hat_naive - delta_true
     LCL_delta_hat_naive <- samp_inference$LCL_delta_hat_naive
+    UCL_delta_hat_naive <- samp_inference$UCL_delta_hat_naive
     var_delta_hat_naive <- samp_inference$var_delta_hat_naive
     mse_naive <- delta_hat_naive_bias^2
     samp_inference$delta_wmat <- samp_inference$delta_wmat %>%
@@ -93,9 +95,8 @@ run_resamp_phase23_simulation <- function(iter = 1000,
       sd_delta_hat_naive = sd(delta_hat_naive),
       mse = mean(mse),
       mse_naive = mean(mse_naive),
-      emp_cov = mean(LCL_T_eff <= delta_true),
-      emp_cov_naive = mean(LCL_delta_hat_naive <= delta_true),
-      emp_cov_test = mean(LCL_test <= delta_true),
+      emp_cov = mean(LCL_T_eff <= delta_true & UCL_T_eff >= delta_true),
+      emp_cov_naive = mean(LCL_delta_hat_naive <= delta_true & UCL_delta_hat_naive >= delta_true),
       .groups = "drop"
     ) %>%
     dplyr::mutate(dose_selected = as.character(dose_selected))
