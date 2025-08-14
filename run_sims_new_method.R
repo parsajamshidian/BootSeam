@@ -63,6 +63,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
   delta_hat_2_bs <- numeric(B1)
 
   b1 = 0
+  bias_vals_final_s1_est <- c()
   while (b1 <= B1) {
 
     # Resample stage 1 data
@@ -75,6 +76,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
     y1_boot <- y1_s1[boot_ind1]
     y2_boot <- y2_s1[boot_ind2]
 
+
     d_boot_selection <- dose_select(y0_boot, y1_boot, y2_boot, alternative, alpha = alpha, htest_method = htest_method)
     d_boot <- d_boot_selection$d
     if (d_boot != d){
@@ -83,6 +85,7 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
       delta_1_star_b <- ifelse(d_boot == 1, mean(y1_boot) - mean(y0_boot),
                                mean(y2_boot) - mean(y0_boot))
     }
+    bias_vals_final_s1_est <- c(bias_vals_final_s1_est, delta_1_star_b - delta_hat_naive_s1)
 
     # Now do nested bootstrap for bias correction
     delta_star_star <- numeric(B2)
@@ -121,19 +124,23 @@ run_resamp_inference_phase23_1 <- function(mu0, mu1, mu2, sigma, n1, n2, alterna
 
 
 
+  delta_hat_s1 <- delta_hat_naive_s1 - mean(bias_vals_final_s1_est) # add the bias from the bootstrap
+  delta_hat_s2 <- (y_bar_d_s2 - y_bar_0_s2)
 
   empty_ws_vec = rep(NA, length(ws))
   delta_ci_mat = data.frame(w = empty_ws_vec,
                             delta_hat = empty_ws_vec,
+                            delta_hat_final_est = empty_ws_vec,
                             LCL = empty_ws_vec,
                             UCL = empty_ws_vec)
   for (i in 1:length(ws)) {
     w <- ws[i]
     delta_hat_full_bs <- w * delta_hat_1_deb_bs + (1 - w) * delta_hat_2_bs
+    delta_hat_final_est <- w * delta_hat_s1 + (1 - w) * delta_hat_s2
     LCL <- quantile(delta_hat_full_bs, probs = alpha_LCL / 2)
     UCL <- quantile(delta_hat_full_bs, probs = 1 - alpha_LCL/2)
     delta_hat <- mean(delta_hat_full_bs)
-    delta_ci_mat[i, ] <- c(w, delta_hat, LCL, UCL)
+    delta_ci_mat[i, ] <- c(w, delta_hat, delta_hat_final_est, LCL, UCL)
     # Store CI, check coverage, etc.
   }
 
@@ -212,7 +219,7 @@ run_phase23_simulation_new <- function(n_sim = 100,
     delta_ci_mat <- results$delta_ci_mat %>%
       mutate(
         covered = as.integer(LCL <= delta_true & UCL >= delta_true),
-        bias = (delta_hat - delta_true),
+        bias = (delta_hat_final_est - delta_true),
         dose_selected = dose_selected,
         delta_hat_naive = delta_hat_naive,
         naive_bias = naive_bias,
@@ -227,8 +234,8 @@ run_phase23_simulation_new <- function(n_sim = 100,
   return(delta_all_ests)
 }
 
-delta_all_ests <- run_phase23_simulation_new(n_sim = 100, mu0 = 0, mu1 = 0, mu2 = 0, n1 = 100, n2 = 100, B1 = 100,
-                                             seed = 4, alpha_LCL = 0.05, alpha = 0.5)
+delta_all_ests <- run_phase23_simulation_new(n_sim = 1000, mu0 = 0, mu1 = 0, mu2 = 0, n1 = 100, n2 = 100, B1 = 500,
+                                             seed = 5, alpha_LCL = 0.05, alpha = 0.15)
 
 
 
@@ -244,14 +251,36 @@ delta_all_ests_summarized <- delta_all_ests %>% mutate(dose_selected = as.charac
 # saveRDS(delta_all_ests_summarized, file = "delta_all_ests_summarized.RDS")
 
 
-# naive_lines <- delta_all_ests_summarized %>%
-#   distinct(dose_selected, emp_cov_naive) %>%
-#   mutate(linetype = "Naive Estimator")
-#
-# cov_plot <- ggplot(delta_all_ests_summarized, aes(x = w, y = emp_cov, color = dose_selected, group = dose_selected)) +
-#   geom_line(aes(linetype = "Debiased Estimator")) +
-#   geom_hline(data = naive_lines,
-#              aes(yintercept = emp_cov_naive, color = dose_selected, linetype = linetype)) +
-#   scale_linetype_manual(name = "Estimator Type", values = c("Debiased Estimator" = "solid", "Naive Estimator" = "dashed")) +
-#   labs(color = "Dose Selected") + geom_hline(yintercept = 0.95)
-# cov_plot
+naive_lines <- delta_all_ests_summarized %>%
+  distinct(dose_selected, emp_cov_naive) %>%
+  mutate(linetype = "Naive Estimator")
+
+cov_plot <- ggplot(delta_all_ests_summarized, aes(x = w, y = emp_cov, color = dose_selected, group = dose_selected)) +
+  geom_line(aes(linetype = "Debiased Estimator"), size = 1.5) +
+  geom_hline(data = naive_lines,
+             aes(yintercept = emp_cov_naive, color = dose_selected, linetype = linetype),
+             size = 1.5) +
+  scale_linetype_manual(name = "Estimator Type", values = c("Debiased Estimator" = "solid", "Naive Estimator" = "dashed")) +
+  labs(color = "Dose Selected", x = "w", y = "Empirical Coverage") +
+  ggtitle("Coverage Results from Double Bootstrap Method") +
+  geom_hline(yintercept = 0.95, lty = "twodash", col = "blue", lwd = 1.5) +
+  theme(
+    title = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    legend.key.size = unit(1.5, "lines"),
+    legend.position = "right",
+    legend.key.width = unit(1.6, "cm"),  # wider legend lines
+    legend.key.height = unit(0.6, "cm"),  # taller legend keys
+  )
+
+cov_plot
+
+
+delta_all_ests %>% filter(w == 1, dose_selected == 2) %>% select(delta_hat) %>% as.vector() %>% unlist() %>%
+  density() %>% plot()
+
+
+lines(density(rnorm(100000, mean = 0.3, sd = 0.1)), , col = "red")

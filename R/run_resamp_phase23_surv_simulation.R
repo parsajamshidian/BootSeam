@@ -17,47 +17,52 @@
 #'
 #' @examples
 run_resamp_phase23_survival_simulation <- function(iter = 1000,
-                                                   n_per_group = c(control = 100, dose1 = 100, dose2 = 100),
-                                                   lambda_list = c(control = 2, dose1 = 1, dose2 = 0.5),
+                                                   n_per_group_s1 = 100,
+                                                   n_per_group_s2 = 100,
+                                                   lambda_list = list(control = 0.1, dose1 = 0.08, dose2 = 0.06),
                                                    rho = 0.9,
-                                                   p_list = c(control = 0.6, dose1 = 0.3, dose2 = 0.15),
+                                                   p_list = list(control = 0.5, dose1 = 0.4, dose2 = 0.3),
                                                    alternative = "less",
+                                                   t0 = 12,
+                                                   study_end = 36,
                                                    alpha = 0.15, alpha_LCL = 0.025,
                                                    ws = seq(0, 1, length.out = 100), B = 100,
+                                                   n_iter_dose1_done = FALSE,
+                                                   n_iter_dose2_done = FALSE,
                                                    seed = 123) {
   set.seed(seed)
 
-
-  log_HR_tilde_all_ests <- data.frame(matrix(nrow = 0, ncol = 11))
+  log_HR_tilde_all_ests <- data.frame(matrix(nrow = 0, ncol = 0))
   n_iter_dose1 = 0
   n_iter_dose2 = 0
-  n_iter_dose1_done = FALSE
-  n_iter_dose2_done = FALSE
   done = FALSE
   while (!done) {
-    n_iter_dose1_done <- n_iter_dose1 > iter
-    n_iter_dose2_done <- n_iter_dose2 > iter
+    n_iter_dose1_done <- if(!n_iter_dose1_done) n_iter_dose1 > iter else n_iter_dose1_done
+    n_iter_dose2_done <- if(!n_iter_dose2_done) n_iter_dose2 > iter else n_iter_dose2_done
     done <- (n_iter_dose1_done & n_iter_dose2_done)
-    samp_inference <- run_resamp_inference_phase23_surv(n_per_group = n_per_group,
+    samp_inference <- run_resamp_inference_phase23_surv(n_per_group_s1 = n_per_group_s1,
+                                                        n_per_group_s2 = n_per_group_s2,
                                                         lambda_list = lambda_list,
                                                         rho = rho,
                                                         p_list = p_list,
                                                         alternative = alternative,
+                                                        t0 = t0,
+                                                        study_end = study_end,
                                                         alpha = alpha, alpha_LCL = alpha_LCL,
-                                                        ws = ws, B = B, n_iter_dose1_done, n_iter_dose2_done
+                                                        ws = ws, B = B, n_iter_dose1_done = n_iter_dose1_done, n_iter_dose2_done = n_iter_dose2_done
     )
 
 
     dose_selected <- samp_inference$dose
 
     if (dose_selected == 1 & !n_iter_dose1_done) {
-      log_HR_true <- log(lambda_list["dose1"] / lambda_list[1])
+      log_HR_true <- log(lambda_list$dose1 / lambda_list$control)
       n_iter_dose1 = n_iter_dose1 + 1
-      if(n_iter_dose1 %% 100 == 0) print(paste0("Dose 1:", n_iter_dose1))
+      if(n_iter_dose1 %% 10 == 0) print(paste0("Dose 1:", n_iter_dose1))
     } else if (dose_selected == 2 & !n_iter_dose2_done) {
-      log_HR_true <- log(lambda_list["dose2"] / lambda_list[1])
+      log_HR_true <- log(lambda_list$dose2 / lambda_list$control)
       n_iter_dose2 = n_iter_dose2 + 1
-      if(n_iter_dose2 %% 100 == 0) print(paste0("Dose 2:", n_iter_dose2))
+      if(n_iter_dose2 %% 10 == 0) print(paste0("Dose 2:", n_iter_dose2))
     } else {
       next
     }
@@ -67,10 +72,12 @@ run_resamp_phase23_survival_simulation <- function(iter = 1000,
     mse_naive <- logHR_naive_bias^2
     samp_inference$logHR_w_mat <- samp_inference$logHR_w_mat %>%
       dplyr::mutate(bias = logHR_tilde - log_HR_true, mse = (logHR_tilde - log_HR_true)^2)
+    logHR_s2 <- samp_inference$logHR_s2
+
 
     log_HR_tilde_all_ests <- rbind(
       log_HR_tilde_all_ests,
-      cbind(samp_inference$logHR_w_mat, dose_selected, logHR_naive, logHR_naive_bias, var_logHR_naive, mse_naive)
+      cbind(samp_inference$logHR_w_mat, dose_selected, logHR_naive, logHR_naive_bias, var_logHR_naive, mse_naive, logHR_s2)
     )
 
   }
@@ -93,5 +100,5 @@ run_resamp_phase23_survival_simulation <- function(iter = 1000,
 
   min_w_mse <- est_by_dose %>% group_by(dose_selected) %>%
     summarise(w = w[which.min(mse)], min.mse = min(mse))
-  return(list(est_by_dose = est_by_dose, min_w_mse = min_w_mse))
+  return(list(est_by_dose = est_by_dose, min_w_mse = min_w_mse, log_HR_tilde_all_ests = log_HR_tilde_all_ests))
 }
