@@ -20,9 +20,9 @@ run_resamp_phase23_survival_simulation <- function(iter = 1000,
                                                    n_per_group_s1 = 100,
                                                    n_per_group_s2 = 100,
                                                    lambda_list = list(control = 0.1, dose1 = 0.08, dose2 = 0.06),
-                                                   rho = 0.9,
-                                                   p_list = list(control = 0.5, dose1 = 0.4, dose2 = 0.3),
-                                                   alternative = "less",
+                                                   rho = -0.9,
+                                                   p_list = list(control = 0.3, dose1 = 0.35, dose2 = 0.4),
+                                                   alternative = "greater",
                                                    t0 = 12,
                                                    study_end = 36,
                                                    alpha = 0.15, alpha_LCL = 0.025,
@@ -73,11 +73,12 @@ run_resamp_phase23_survival_simulation <- function(iter = 1000,
     samp_inference$logHR_w_mat <- samp_inference$logHR_w_mat %>%
       dplyr::mutate(bias = logHR_tilde - log_HR_true, mse = (logHR_tilde - log_HR_true)^2)
     logHR_s2 <- samp_inference$logHR_s2
+    info_fraction <- samp_inference$info_fraction
 
 
     log_HR_tilde_all_ests <- rbind(
       log_HR_tilde_all_ests,
-      cbind(samp_inference$logHR_w_mat, dose_selected, logHR_naive, logHR_naive_bias, var_logHR_naive, mse_naive, logHR_s2)
+      cbind(samp_inference$logHR_w_mat, dose_selected, logHR_naive, logHR_naive_bias, var_logHR_naive, mse_naive, logHR_s2, info_fraction)
     )
 
   }
@@ -94,6 +95,7 @@ run_resamp_phase23_survival_simulation <- function(iter = 1000,
       mse_naive = mean(mse_naive),
       emp_cov = mean(LCL_logHR_tilde <= log_HR_true),
       emp_cov_naive = mean(LCL_logHR_naive <= log_HR_true),
+      avg_info_fraction = mean(info_fraction),
       .groups = "drop"
     ) %>%
     dplyr::mutate(dose_selected = as.character(dose_selected))

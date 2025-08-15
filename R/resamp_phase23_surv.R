@@ -55,7 +55,6 @@ run_resamp_inference_phase23_surv <- function(n_per_group_s1 = 100,
   # Select dose based on proportions of survival events
   # dose_selection <- dose_select(y0_s1, y1_s1, y2_s1, alternative, alpha = alpha,
   #                               htest_method = "proportion")
-  browser()
   d <- survival_data$selected_dose
   if (d == 0) {
     warning("No dose was selected. Stop for futility")
@@ -67,7 +66,6 @@ run_resamp_inference_phase23_surv <- function(n_per_group_s1 = 100,
   }
   stage1_data = survival_data$stage1_data
 
-  #
   # Suppose you select "doseX" for Stage 2
   selected_dose_coef_name <- paste0("treatmentdose", d)
   selected_dose <- paste0("dose", d)
@@ -77,14 +75,31 @@ run_resamp_inference_phase23_surv <- function(n_per_group_s1 = 100,
   #                                       rho,
   #                                       p_list)
   # Stage 1 model
-  model1 <- coxph(Surv(entry_time, exit_time, event) ~ treatment, data = stage1_data %>% filter(treatment %in% c("control", selected_dose)))
+  model1 <- coxph(Surv(entry_time, exit_time, event) ~ treatment, data = stage1_data)
 
   logHR_s1 <- ifelse(d == 1, coef(model1)["treatmentdose1"], coef(model1)["treatmentdose2"])
-
 
   stage2_data <- survival_data$stage2_data
   # run Cox model for stage 2 data
   model2 <- coxph(Surv(entry_time, exit_time, event) ~ treatment, data = stage2_data)
+
+  # Filter Stage 1 data to selected dose and control
+  stage1_subset <- stage1_data %>%
+    filter(treatment %in% c("control", selected_dose))
+
+  # Count number of events in Stage 1 for selected arms
+  n_events_stage1 <- sum(stage1_subset$event)
+
+  # Filter Stage 2 data to selected dose and control
+  stage2_subset <- stage2_data %>%
+    filter(treatment %in% c("control", selected_dose))
+
+  # Count number of events in Stage 2 for selected arms
+  n_events_stage2 <- sum(stage2_subset$event)
+
+  # Compute information fraction
+  info_fraction <- n_events_stage1 / (n_events_stage1 + n_events_stage2)
+
 
   logHR_s2 <- coef(model2)[selected_dose_coef_name]
   # Naive estimate
@@ -118,7 +133,7 @@ run_resamp_inference_phase23_surv <- function(n_per_group_s1 = 100,
       #model_boot <- coxph(Surv(time, status) ~ group, data = stage1_data_boot %>% filter(group %in% c("control", selected_dose)) %>% droplevels())
       model_boot <- coxph(Surv(entry_time, exit_time, event) ~ treatment, data = stage1_data_boot)
       log_HR_star_s1 = coef(model_boot)[selected_dose_star_coef_name]
-      bias_vals <- c(bias_vals, logHR_s1 - log_HR_star_s1)
+      bias_vals <- c(bias_vals, log_HR_star_s1 - logHR_s1)
       b = b + 1
     }
   }
@@ -152,7 +167,8 @@ run_resamp_inference_phase23_surv <- function(n_per_group_s1 = 100,
     var_logHR_naive = var_logHR_naive,
     logHR_tilde_s1 = logHR_tilde_s1,
     logHR_s2 = logHR_s2,
-    logHR_w_mat = logHR_w_mat
+    logHR_w_mat = logHR_w_mat,
+    info_fraction = info_fraction
   ))
 
 

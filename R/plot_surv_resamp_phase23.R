@@ -49,10 +49,10 @@ plot_phase23_results_surv <- function(sim_result, title_mu = expression(lambda[0
     distinct(dose_selected, logHR_naive_bias) %>%
     mutate(linetype = "Naive Estimator")
 
-  bias_plot <- ggplot(est_by_dose, aes(x = w, y = bias, color = dose_selected, group = dose_selected)) +
+  bias_plot <- ggplot(est_by_dose, aes(x = w, y = (bias), color = dose_selected, group = dose_selected)) +
     geom_line(aes(linetype = "Debiased Estimator"), lwd = 1.2) +
     geom_hline(data = naive_lines,
-               aes(yintercept = logHR_naive_bias, color = dose_selected, linetype = linetype), lwd = 1.1) +
+               aes(yintercept = (logHR_naive_bias), color = dose_selected, linetype = linetype), lwd = 1.1) +
     scale_color_manual(name = "Dose Selected", values = cb_palette) +
     scale_linetype_manual(name = "Estimator Type", values = c("Debiased Estimator" = "solid", "Naive Estimator" = "dashed")) +
     ylab("Bias")
